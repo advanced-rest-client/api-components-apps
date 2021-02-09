@@ -1,4 +1,4 @@
-# Copyright 2019 Mulesoft.
+# Copyright 2019 MuleSoft.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -46,7 +46,7 @@ spec:
           secretName: github-ssh-key
       containers:
       - name: github-ci
-        image: gcr.io/advancedrestclient-1155/apic-ci-api:0.2.7
+        image: gcr.io/advancedrestclient-1155/apic-ci-api:0.2.8
         volumeMounts:
         - name: google-cloud-key
           mountPath: /var/secrets/google

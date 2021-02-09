@@ -1,10 +1,16 @@
-import EventEmitter from 'events';
-import { ComponentBuildModel } from '../models/component-build-model';
-import { StageBuild } from './stage-build';
-import { MasterBuild } from './master-build';
-import { TagBuild } from './tag-build';
+import { EventEmitter } from 'events';
+import { ComponentBuildModel } from '../models/component-build-model.js';
+import { StageBuild } from './stage-build.js';
+import { MasterBuild } from './master-build.js';
+import { TagBuild } from './tag-build.js';
 
+/**
+ * A class that runs GitHub webhooks builds.
+ */
 export class ApicBuildRunner extends EventEmitter {
+  /**
+   * @param {string} id The data store ID of the build.
+   */
   constructor(id) {
     super();
     this.id = id;
@@ -13,69 +19,108 @@ export class ApicBuildRunner extends EventEmitter {
     this.model = new ComponentBuildModel();
   }
 
+  /**
+   * Runs the current build.
+   * @return {Promise<void>}
+   */
   async run() {
     await this.model.startBuild(this.id);
     const info = await this.model.get(this.id);
     await this._process(info);
   }
 
+  /**
+   * Executes corresponding to the configured branch build.
+   * @param {object} model Read from the data store info model.
+   * @return {Promise<void>}
+   */
   async _process(model) {
     switch (model.type) {
       case 'stage-build':
-        return await this._buildStage(model);
+        return this._buildStage(model);
       case 'master-build':
-        return await this._buildMaster(model);
+        return this._buildMaster(model);
       case 'tag-build':
-        return await this._buildTag(model);
+        return this._buildTag(model);
       default:
         throw new Error('Unsupported build type.');
     }
   }
 
-  _buildStage(model) {
+  /**
+   * Runs the stage build process.
+   * @param {object} model Read from the data store info model.
+   * @return {Promise<void>}
+   */
+  async _buildStage(model) {
     this.running = true;
     const runner = new StageBuild(model);
-    return runner
-      .build()
-      .then(() => this.notifyEnd())
-      .catch((cause) => this.notifyError(cause));
+    try {
+      await runner.build();
+      await this.notifyEnd();
+    } catch (e) {
+      this.notifyError(e);
+    }
   }
 
-  _buildMaster(model) {
+  /**
+   * Runs the master branch build process.
+   * @param {object} model Read from the data store info model.
+   * @return {Promise<void>}
+   */
+  async _buildMaster(model) {
     this.running = true;
     const runner = new MasterBuild(model);
-    return runner
-      .build()
-      .then(() => this.notifyEnd())
-      .catch((cause) => this.notifyError(cause));
+    try {
+      await runner.build();
+      await this.notifyEnd();
+    } catch (e) {
+      this.notifyError(e);
+    }
   }
 
-  _buildTag(model) {
+  /**
+   * Runs the tag build process.
+   * @param {object} model Read from the data store info model.
+   * @return {Promise<void>}
+   */
+  async _buildTag(model) {
     this.running = true;
     const runner = new TagBuild(model);
-    return runner
-      .build()
-      .then(() => this.notifyEnd())
-      .catch((cause) => this.notifyError(cause));
+    try {
+      await runner.build();
+      await this.notifyEnd();
+    } catch (e) {
+      this.notifyError(e);
+    }
   }
 
-  notifyEnd() {
+  /**
+   * Updates the model after finishing the task.
+   * @return {Promise<void>}
+   */
+  async notifyEnd() {
     this.running = false;
-    this.model
-      .finishBuild(this.id)
-      .catch(() => {})
-      .then(() => {
-        this.emit('end');
-      });
+    try {
+      await this.model.finishBuild(this.id);
+    } catch (_) {
+      // ...
+    }
+    this.emit('end');
   }
 
-  notifyError(cause) {
+  /**
+   * Updates the model after an error.
+   * @param {Error} cause The error object
+   * @return {Promise<void>}
+   */
+  async notifyError(cause) {
     this.running = false;
-    this.model
-      .setBuildError(this.id, cause.message)
-      .catch(() => {})
-      .then(() => {
-        this.emit('error', cause);
-      });
+    try {
+      await this.model.setBuildError(this.id, cause.message);
+    } catch (_) {
+      // ...
+    }
+    this.emit('error', cause);
   }
 }

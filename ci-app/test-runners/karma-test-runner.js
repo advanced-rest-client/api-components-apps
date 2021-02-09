@@ -1,6 +1,7 @@
+/* eslint-disable require-jsdoc */
 import path from 'path';
-import { BaseTestRunner } from './base-test-runner';
-import logging from '../lib/logging';
+import { BaseTestRunner } from './base-test-runner.js';
+import logging from '../lib/logging.js';
 import { fork } from 'child_process';
 
 export class KarmaTestRunner extends BaseTestRunner {
@@ -45,7 +46,7 @@ export class KarmaTestRunner extends BaseTestRunner {
     this._errorHandler = this._errorHandler.bind(this);
     // A placeholder for any ENV setup
     const env = Object.assign({ }, process.env);
-    // execArgv are coppied from this process and this is not what we want.
+    // execArgv are copied from this process and this is not what we want.
     const options = {
       execArgv: [],
       env,
@@ -56,6 +57,7 @@ export class KarmaTestRunner extends BaseTestRunner {
       this._resolver = resolve;
       this._rejecter = reject;
       const file = path.join(__dirname, 'karma-proc.js');
+      // @ts-ignore
       const proc = fork(file, options);
       this.proc = proc;
       proc.on('message', this._messageHandler);

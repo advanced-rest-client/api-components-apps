@@ -1,7 +1,8 @@
+/* eslint-disable import/no-namespace */
 import path from 'path';
 import Git from 'nodegit';
-import logging from '../lib/logging';
-import config from '../config';
+import logging from '../lib/logging.js';
+import config from '../config.js';
 import * as openpgp from 'openpgp';
 import fs from 'fs-extra';
 /**
@@ -15,55 +16,64 @@ import fs from 'fs-extra';
  */
 export class GitSourceControl {
   /**
-   * @param {String} workingDir A working directory where all operations are performed.
+   * @param {string} workingDir A working directory where all operations are performed.
    * This is not cloned repository location. It is constructed from `workingDir` and `name`.
-   * @param {String} org Repository owner organization
-   * @param {String} name Repository name
+   * @param {string} org Repository owner organization
+   * @param {string} name Repository name
    */
   constructor(workingDir, org, name) {
     this.org = org;
     this.name = name;
     this.repoName = `${org}/${name}`;
     this.workingDir = workingDir;
+    /**
+     * @type {Git.Repository}
+     */
+    this.repo = null;
   }
+
   /**
    * Creates GitHub repository URL.
-   * @param {Boolean} useSsh When true an SSH scheme is used instead of HTTP.
-   * This is to be used when the repository is to be marged with a remote branch.
-   * If the repository is checked out only in read-only mode a HTTP can be used intead.
+   * @param {boolean} useSsh When true an SSH scheme is used instead of HTTP.
+   * This is to be used when the repository is to be merged with a remote branch.
+   * If the repository is checked out only in read-only mode a HTTP can be used instead.
    * Note, pushing changes requires signed commits which triggest additional logic.
-   * @return {String} An URL to use to checkout the repository.
+   * @return {string} An URL to use to checkout the repository.
    */
   getRepoUrl(useSsh) {
     const authority = useSsh ? 'git@github.com:' : 'https://github.com/';
     return `${authority}${this.repoName}.git`;
   }
+
   /**
    * Clones the repository to current working directory.
    * It creates a folder in the working directory with the component.
-   * @param {Boolean} useSsh When true an SSH scheme is used instead of HTTP.
-   * @param {String} branch A branch name to checkout
+   * @param {boolean} useSsh When true an SSH scheme is used instead of HTTP.
+   * @param {string} branch A branch name to checkout
    * @return {Promise} Resolved when a repository is created.
    */
   async clone(useSsh, branch='master') {
     const url = this.getRepoUrl(useSsh);
     const repo = await this._clone({
       url,
-      dir: path.join(this.workingDir, this.name)
+      dir: path.join(this.workingDir, this.name),
     });
     this.repo = repo;
     const ref = await this.ensureBranch(repo, branch);
-    logging.verbose('On branch ' + ref.shorthand());
+    logging.verbose(`On branch ${ref.shorthand()}`);
   }
+
   /**
    * Opens an existing repository and sets `repo` property.
-   * @return {Promise}
+   * @return {Promise<Git.Repository>}
    */
   async open() {
     const dir = path.join(this.workingDir, this.name);
     const repo = await Git.Repository.open(dir);
     this.repo = repo;
+    return repo;
   }
+
   /**
    * Clones the repository.
    * This sets `repo` property with the reference to `Repository` object.
@@ -77,14 +87,15 @@ export class GitSourceControl {
    */
   async _clone(cloneOpts) {
     const opts = {
-      fetchOpts: this._getFetchOptions()
+      fetchOpts: this._getFetchOptions(),
     };
     const { dir, url } = cloneOpts;
     logging.verbose(`Cloning ${url} into ${dir}...`);
-    const repo = await Git.Clone(url, dir, opts);
+    const repo = await Git.Clone.clone(url, dir, opts);
     logging.verbose('Repository cloned.');
     return repo;
   }
+
   /**
    * Ensures that the repository is on specific branch.
    * If the branch does not exist it is created.
@@ -104,7 +115,7 @@ export class GitSourceControl {
     } else {
       logging.verbose(`Already on ${branch} branch.`);
     }
-    return await repo.getCurrentBranch();
+    return repo.getCurrentBranch();
   }
 
   /**
@@ -115,17 +126,20 @@ export class GitSourceControl {
   _getFetchOptions() {
     return {
       callbacks: {
-        credentials: function(url, userName) {
-          return Git.Cred.sshKeyNew(
+        credentials: (url, userName) => {
+          // ssh key configuration is in config.json file
+          const credentials = Git.Cred.sshKeyNew(
               userName,
               config.get('GITHUB_SSH_KEY_PUB'),
               config.get('GITHUB_SSH_KEY'),
-              config.get('GITHUB_SSH_KEY_PASS')
+              config.get('GITHUB_SSH_KEY_PASS'),
           );
-        }
-      }
+          return credentials;
+        },
+      },
     };
   }
+
   /**
    * Checkouts repository branch. The branch must exists in the origin.
    *
@@ -143,13 +157,14 @@ export class GitSourceControl {
       logging.verbose(`Creating new branch ${branch}...`);
       const reference = await this.createBranch(repo, branch);
       await repo.checkoutBranch(reference, {});
-      const commit = await repo.getReferenceCommit('refs/remotes/origin/' + branch);
+      const commit = await repo.getReferenceCommit(`refs/remotes/origin/${branch}`);
       await Git.Reset.reset(repo, commit, 3, {});
     }
     if (ref) {
       await repo.checkoutBranch(ref, {});
     }
   }
+
   /**
    * Checkouts branch and if the branch does not exist it is created.
    *
@@ -167,7 +182,7 @@ export class GitSourceControl {
       const targetCommit = await repo.getHeadCommit();
       ref = await repo.createBranch(branch, targetCommit, false);
     }
-    return await repo.checkoutBranch(ref, {});
+    return repo.checkoutBranch(ref, {});
   }
 
   /**
@@ -175,41 +190,42 @@ export class GitSourceControl {
    *
    * @param {Object} repo A reference to a repository object. It can be `this.repo`
    * created when `clone()` is called.
-   * @param {String} branch Name of the branch to create
+   * @param {string} branch Name of the branch to create
    * @return {Promise} Resolved promise returns a {Git.Reference} object.
    */
   async createBranch(repo, branch) {
     logging.verbose(`Creating branch ${branch}...`);
     const targetCommit = await repo.getHeadCommit();
-    return await repo.createBranch(branch, targetCommit, false);
+    return repo.createBranch(branch, targetCommit, false);
   }
 
   /**
    * Callback for GPG signature when signing the commit.
-   * @param {String} tosign A string to sign.
+   * @param {string} toSign A string to sign.
    * @return {Promise}
    */
-  async _onSignature(tosign) {
+  async _onSignature(toSign) {
     const privateKeyResult = await this._decryptGpg();
     if (!privateKeyResult) {
       throw new Error('GPG key decoding error.');
     }
-    const buf = new Uint8Array(tosign.length);
-    for (let i = 0; i < tosign.length; i++) {
-      buf[i] = tosign.charCodeAt(i);
+    const buf = new Uint8Array(toSign.length);
+    for (let i = 0; i < toSign.length; i++) {
+      buf[i] = toSign.charCodeAt(i);
     }
     const options = {
       message: openpgp.message.fromBinary(buf),
       privateKeys: [privateKeyResult],
-      detached: true
+      detached: true,
     };
     const signed = await openpgp.sign(options);
     return {
       code: Git.Error.CODE.OK,
       field: 'gpgsig',
-      signedData: signed.signature
+      signedData: signed.signature,
     };
   }
+
   /**
    * Decrypts GPG key to be used to sign commits.
    * @return {Promise}
@@ -225,6 +241,7 @@ export class GitSourceControl {
       return keyObj;
     }
   }
+
   /**
    * Creates a signature object from application configuration.
    * @return {Git.Signature}
@@ -234,6 +251,7 @@ export class GitSourceControl {
     const email = config.get('CI_EMAIL');
     return Git.Signature.now(name, email);
   }
+
   /**
    * Creates a commit.
    * @TODO: when nodegit is ready to use GPG keys this should use configured
@@ -253,9 +271,10 @@ export class GitSourceControl {
     const committer = this._createSignature();
     // return repo.createCommit(branch, author, committer, message, oid, parents);
     // https://github.com/nodegit/nodegit/issues/1018
-    return await repo.createCommitWithSignature(branch, author, committer, message, oid,
+    return repo.createCommitWithSignature(branch, author, committer, message, oid,
         parents, this._onSignature.bind(this));
   }
+
   /**
    * Pushes commits to the origin.
    * @param {Object} repo A reference to a repository object. It can be `this.repo`
@@ -267,15 +286,16 @@ export class GitSourceControl {
     logging.verbose(`Pushing to the remote: ${branch}`);
     const remote = await repo.getRemote('origin');
     const refs = [`refs/heads/${branch}:refs/heads/${branch}`];
-    return await remote.push(refs, this._getFetchOptions());
+    return remote.push(refs, this._getFetchOptions());
   }
+
   /**
    * Commits `files` to current branch.
    * It adds the files, write to index, and write to the repo tree.
    *
    * @param {Object} repo The repository object.
    * @param {Array<String>} files A list of file to be added to current working tree.
-   * @return {Promise<String>} Promise resolved to nodegit's `oid`
+   * @return {Promise<String>} Promise resolved to the nodegit `oid`
    */
   async commitFiles(repo, files) {
     const index = await repo.index();
@@ -284,8 +304,9 @@ export class GitSourceControl {
       await index.addByPath(file);
     }
     await index.write();
-    return await index.writeTree();
+    return index.writeTree();
   }
+
   /**
    * Merge current branch with remote branch favouring our branch.
    * @param {Object} repo The repository object.
@@ -296,6 +317,6 @@ export class GitSourceControl {
     const origin = `origin/${remote}`;
     await repo.fetch('origin', this._getFetchOptions());
     const sig = this._createSignature();
-    return await repo.mergeBranches(remote, origin, sig, 1, { fileFavor: Git.Merge.FILE_FAVOR.OURS });
+    return repo.mergeBranches(remote, origin, sig, 1, { fileFavor: Git.Merge.FILE_FAVOR.OURS });
   }
 }

@@ -1,7 +1,10 @@
 import tmp from 'tmp';
-import EventEmitter from 'events';
-import logging from '../lib/logging';
+import { EventEmitter } from 'events';
+import logging from '../lib/logging.js';
 import fs from 'fs-extra';
+
+/* eslint-disable class-methods-use-this */
+
 /**
  * Base class for component builders.
  */
@@ -19,6 +22,7 @@ export class BaseBuild extends EventEmitter {
     this.workingDir = dir;
     return dir;
   }
+
   /**
    * Cleans up the temporaty directory.
    * @return {Promise}
@@ -34,6 +38,7 @@ export class BaseBuild extends EventEmitter {
       await fs.remove(this.workingDir);
     }
   }
+
   /**
    * Creates a temp working dir for the console.
    * @return {Promise}

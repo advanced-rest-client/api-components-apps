@@ -1,6 +1,6 @@
-import logging from '../lib/logging';
+import logging from '../lib/logging.js';
 import Git from 'nodegit';
-import { GitBuild } from './git-build';
+import { GitBuild } from './git-build.js';
 import fs from 'fs-extra';
 import path from 'path';
 import { getScopeAndName, nonElements } from './utils.js';
@@ -9,7 +9,7 @@ import { getScopeAndName, nonElements } from './utils.js';
  */
 export class MasterBuild extends GitBuild {
   /**
-   * @param {Object} info Data store entry for the build
+   * @param {object} info Data store entry for the build
    */
   constructor(info) {
     super();
@@ -22,7 +22,7 @@ export class MasterBuild extends GitBuild {
   /**
    * Performs a build on a master branch:
    * - tag version on GitHub
-   * @return {Promise}
+   * @return {Promise<void>}
    */
   async build() {
     if (nonElements.indexOf(this.name) !== -1) {
@@ -41,9 +41,10 @@ export class MasterBuild extends GitBuild {
       throw e;
     }
   }
+
   /**
    * Creates a new tag for current version, if not exists.
-   * @return {Promise}
+   * @return {Promise<void>}
    * @throws {Error} When a tag already exists
    */
   async _tag() {
@@ -61,19 +62,19 @@ export class MasterBuild extends GitBuild {
 
   /**
    * Creates a new tag.
-   * @param {String} ver
-   * @return {Promise}
+   * @param {string} ver
+   * @return {Promise<Git.Oid>}
    */
   async _addTag(ver) {
     const tagger = this._createSignature();
-    const message = 'Publishing release v' + ver;
+    const message = `Publishing release v${ver}`;
     const commit = await Git.Commit.lookup(this.repo, this.info.commit);
-    return await Git.Tag.create(this.repo, ver, commit, tagger, message, 0);
+    return Git.Tag.create(this.repo, ver, commit, tagger, message, 0);
   }
 
   /**
    * Reads version from package.json file.
-   * @return {Promise<String>} Wersion of currently processed element.
+   * @return {Promise<string>} Wersion of currently processed element.
    */
   async _getVersion() {
     const pkg = await fs.readJson(path.join(this.workingDir, 'package.json'), { throws: false });
@@ -85,13 +86,13 @@ export class MasterBuild extends GitBuild {
 
   /**
    * Pushes tag to the remote.
-   * @param {String} tag Tag name
-   * @return {Promise}
+   * @param {string} tag Tag name
+   * @return {Promise<number>}
    */
   async _push(tag) {
     logging.verbose(`Pushing to the remote: ${tag}`);
     const remote = await this.repo.getRemote('origin');
     const refs = [`refs/tags/${tag}:refs/tags/${tag}`];
-    return await remote.push(refs, this._getFetchOptions());
+    return remote.push(refs, this._getFetchOptions());
   }
 }

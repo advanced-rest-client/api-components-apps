@@ -1,18 +1,33 @@
 import express from 'express';
-import { BaseApi } from './base-api';
-import { ComponentBuildModel } from '../models/component-build-model';
-import logging from '../lib/logging';
-import background from '../lib/background';
+import { BaseApi } from './base-api.js';
+import { ComponentBuildModel } from '../models/component-build-model.js';
+import logging from '../lib/logging.js';
+import background from '../lib/background.js';
+
+/** @typedef {import('express').Request} Request */
+/** @typedef {import('express').Response} Response */
 
 const router = express.Router();
 export default router;
 
+/**
+ * API route definition for builds.
+ */
 class BuildsApiRoute extends BaseApi {
+  /**
+   * @constructor
+   */
   constructor() {
     super();
     this.model = new ComponentBuildModel();
   }
 
+  /**
+   * Route to list builds.
+   * @param {Request} req
+   * @param {Response} res
+   * @return {Promise<void>}
+   */
   async listBuilds(req, res) {
     const errors = this.validatePagination(req);
     if (errors) {
@@ -20,9 +35,20 @@ class BuildsApiRoute extends BaseApi {
       return;
     }
     const { limit, nextPageToken } = req.query;
+    let typedLimit;
+    if (limit) {
+      typedLimit = Number(limit);
+      if (Number.isNaN(typedLimit)) {
+        typedLimit = undefined;
+      }
+    }
+    let typedToken;
+    if (nextPageToken) {
+      typedToken = String(nextPageToken);
+    }
     try {
-      const result = await this.model.list(limit, nextPageToken);
-      this.sendListResult(result, res);
+      const result = await this.model.list(typedLimit, typedToken);
+      this.sendQueryResult(result, res);
     } catch (cause) {
       logging.error(cause);
       if (cause.code === 3) {
@@ -33,6 +59,12 @@ class BuildsApiRoute extends BaseApi {
     }
   }
 
+  /**
+   * Route to get a build info.
+   * @param {Request} req
+   * @param {Response} res
+   * @return {Promise<void>}
+   */
   async getBuild(req, res) {
     const { id } = req.params;
     try {
@@ -48,6 +80,12 @@ class BuildsApiRoute extends BaseApi {
     }
   }
 
+  /**
+   * Route to restart a build.
+   * @param {Request} req
+   * @param {Response} res
+   * @return {Promise<void>}
+   */
   async restartBuild(req, res) {
     const { id } = req.params;
     try {

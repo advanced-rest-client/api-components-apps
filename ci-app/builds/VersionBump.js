@@ -1,11 +1,14 @@
 import semver from 'semver';
 import fs from 'fs-extra';
 import path from 'path';
-import logging from '../lib/logging';
+import logging from '../lib/logging.js';
 
+/**
+ * Contains a logic responsible for bumping a component version.
+ */
 export class VersionBump {
   /**
-   * @param {String} pkgDir A directory where package sources are located
+   * @param {string} pkgDir A directory where package sources are located
    */
   constructor(pkgDir) {
     if (!pkgDir) {
@@ -18,11 +21,17 @@ export class VersionBump {
     this.pkgDir = pkgDir;
   }
 
+  /**
+   * @return {string} Path to component's package file
+   */
   get packageFile() {
     const { pkgDir } = this;
     return path.join(pkgDir, 'package.json');
   }
 
+  /**
+   * @return {string} Path to component's package-lock.json file
+   */
   get lockFile() {
     const { pkgDir } = this;
     return path.join(pkgDir, 'package-lock.json');
@@ -30,11 +39,8 @@ export class VersionBump {
 
   /**
    * Bumps version of the package.
-   * @param {String} type
-   * - major
-   * - minor
-   * - patch
-   * @return {Promise<Array>} Promise resolved to an array where items are boolean
+   * @param {semver.ReleaseType} type major | minor patch
+   * @return {Promise<boolean[]>} Promise resolved to an array where items are boolean
    * values whether (in order) package.json and package-lock.json files were updated.
    */
   async bump(type) {
@@ -60,18 +66,20 @@ export class VersionBump {
     const lockUpdated = await this.updateLockFile(updated);
     return [true, lockUpdated];
   }
+
   /**
    * Reads contents of the package.json file.
    * @return {Promise<Object>}
    */
   async getPackage() {
     const { packageFile } = this;
-    return await fs.readJson(packageFile);
+    return fs.readJson(packageFile);
   }
+
   /**
    * Updates version in `package-lock.json` file.
-   * @param {String} version New version
-   * @return {Promise<Boolean>} Promise resolved to a boolean value whether the
+   * @param {string} version New version
+   * @return {Promise<boolean>} Promise resolved to a boolean value whether the
    * file was updated.
    */
   async updateLockFile(version) {

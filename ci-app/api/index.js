@@ -1,5 +1,5 @@
 import express from 'express';
-import logging from '../lib/logging';
+import logging from '../lib/logging.js';
 import testsRoute from './tests-api.js';
 import meRoute from './me-api.js';
 import tokenRoute from './token-api.js';
@@ -9,6 +9,7 @@ import componentsRoute from './components-api.js';
 import messagesRoute from './messages-api.js';
 import analyticsRoute from './analytics-api.js';
 import buildsRoute from './builds-api.js';
+import coverageRoute from './CoverageApi.js';
 
 const router = express.Router();
 export default router;
@@ -31,20 +32,22 @@ router.use('/messages', messagesRoute);
 router.use('/analytics', analyticsRoute);
 // Componetns build status
 router.use('/builds', buildsRoute);
+// Componetns coverage data
+router.use('/coverage', coverageRoute);
 // Errors
 router.use((req, res) => {
   const message = `Route ${req.url} not found`;
   logging.warn(message);
   res.status(404).send({
     error: true,
-    message
+    message,
   });
 });
 
-router.use((err, req, res) => {
-  logging.error(err);
-  res.send({
-    error: true,
-    message: 'There was an error. That is all we can share.'
-  });
-});
+// router.use((err, req, res) => {
+//   logging.error(err);
+//   res.send({
+//     error: true,
+//     message: 'There was an error. That is all we can share.',
+//   });
+// });

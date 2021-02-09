@@ -1,9 +1,7 @@
-'use strict';
-
 import winston from 'winston';
 import expressWinston from 'express-winston';
 import { LoggingWinston } from '@google-cloud/logging-winston';
-import config from '../config';
+import config from '../config.js';
 
 const colorize = config.get('NODE_ENV') !== 'production';
 
@@ -14,11 +12,11 @@ const requestLogger = expressWinston.logger({
     new LoggingWinston(),
     new winston.transports.Console({
       json: false,
-      colorize
-    })
+      colorize,
+    }),
   ],
   expressFormat: true,
-  meta: false
+  meta: false,
 });
 
 // Logger to capture any top-level errors and output json diagnostic info.
@@ -28,9 +26,9 @@ const errorLogger = expressWinston.errorLogger({
     new LoggingWinston(),
     new winston.transports.Console({
       json: true,
-      colorize
-    })
-  ]
+      colorize,
+    }),
+  ],
 });
 
 const logger = winston.createLogger({
@@ -38,9 +36,9 @@ const logger = winston.createLogger({
   transports: [
     new winston.transports.Console({
       json: false,
-      colorize
-    })
-  ]
+      colorize,
+    }),
+  ],
 });
 export default {
   errorLogger,

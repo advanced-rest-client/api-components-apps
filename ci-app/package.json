@@ -1,6 +1,6 @@
 {
   "name": "api-components-ci",
-  "version": "0.2.7",
+  "version": "0.2.10",
   "description": "A CI server to run API components tests using latest version of AMF and report results",
   "main": "app.js",
   "scripts": {
@@ -8,6 +8,7 @@
     "start:api": "node --inspect=9227 api.js --PORT=8080",
     "start:worker": "node --inspect=9225 worker.js --PORT=8083",
     "start:github": "node --inspect=9224 github.js --PORT=8084",
+    "start:coverage": "node --inspect=9228 coverage-worker.js --PORT=8085",
     "test": "mocha test/*.spec.js --require esm --timeout 90000",
     "test:watch": "mocha test/*.spec.js --require esm --timeout 90000 --watch",
     "build:api-docs": "node tasks/build-api-docs.js",
@@ -24,11 +25,14 @@
     "@google-cloud/datastore": "^5.1.0",
     "@google-cloud/debug-agent": "^4.2.2",
     "@google-cloud/logging-winston": "^3.0.6",
-    "@google-cloud/pubsub": "^1.7.2",
+    "@google-cloud/pubsub": "^1.7.3",
     "@google-cloud/storage": "^4.7.0",
     "@google-cloud/trace-agent": "^4.2.5",
-    "@open-wc/testing": "^2.5.11",
-    "@open-wc/testing-karma": "^3.3.12",
+    "@open-wc/testing": "^2.5.32",
+    "@open-wc/testing-karma": "^3.4.8",
+    "@types/cors": "^2.8.9",
+    "@types/nodegit": "^0.26.12",
+    "@types/uuid": "^8.3.0",
     "body-parser": "^1.19.0",
     "connect-memcached": "^1.0.0",
     "cors": "^2.8.5",
@@ -36,32 +40,34 @@
     "deepmerge": "^4.2.2",
     "esm": "^3.2.25",
     "express": "^4.17.1",
-    "express-session": "^1.17.0",
-    "express-winston": "^4.0.3",
-    "fs-extra": "^9.0.0",
-    "github-api": "^3.3.0",
+    "express-session": "^1.17.1",
+    "express-winston": "^4.0.5",
+    "fs-extra": "^9.1.0",
+    "github-api": "^3.4.0",
     "jsonwebtoken": "^8.5.1",
     "karma": "^4.4.1",
-    "lit-element": "^2.3.1",
-    "moment": "^2.24.0",
+    "lcov-parse": "^1.0.0",
+    "lit-element": "^2.4.0",
+    "moment": "^2.29.1",
     "nconf": "^0.10.0",
-    "nodegit": "^0.26.5",
-    "openpgp": "^4.10.2",
+    "nodegit": "^0.27.0",
+    "openpgp": "^4.10.10",
     "passport": "^0.4.1",
     "passport-google-oauth20": "^2.0.0",
     "polymer-analyzer": "^3.2.4",
-    "semver": "^7.3.2",
+    "semver": "^7.3.4",
     "slug": "^2.1.1",
-    "tar-fs": "^2.0.1",
+    "tar-fs": "^2.1.1",
     "tmp": "0.1.0",
     "uuid": "^7.0.3",
-    "validator": "^13.0.0",
-    "winston": "^3.2.1"
+    "validator": "^13.5.2",
+    "winston": "^3.3.3"
   },
   "devDependencies": {
-    "eslint-config-google": "^0.14.0",
-    "express-http-proxy": "^1.6.0",
-    "sinon": "^9.0.2"
+    "@api-components/api-console-builder": "3.0.0",
+    "@types/tmp": "^0.2.0",
+    "express-http-proxy": "^1.6.2",
+    "sinon": "^9.2.4"
   },
   "license": "Apache-2.0",
   "repository": {
@@ -75,45 +81,5 @@
   "authors": [
     "Pawel Psztyc",
     "The Advanced REST client authors <arc@mulesoft.com>"
-  ],
-  "eslintConfig": {
-    "extends": [
-      "eslint-config-google"
-    ],
-    "parserOptions": {
-      "sourceType": "module",
-      "ecmaVersion": 8
-    },
-    "env": {
-      "browser": true,
-      "mocha": true,
-      "node": true,
-      "es6": true
-    },
-    "rules": {
-      "no-undef": "error",
-      "require-jsdoc": 0,
-      "comma-dangle": 0,
-      "new-cap": [
-        "error",
-        {
-          "properties": false,
-          "capIsNew": false
-        }
-      ],
-      "max-len": [
-        "error",
-        {
-          "code": 120
-        }
-      ],
-      "object-curly-spacing": [
-        "error",
-        "always"
-      ],
-      "no-console": [
-        "error"
-      ]
-    }
-  }
+  ]
 }

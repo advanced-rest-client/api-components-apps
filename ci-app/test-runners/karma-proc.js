@@ -1,3 +1,5 @@
+/* eslint-disable import/no-commonjs */
+/* eslint-disable require-jsdoc */
 const { config, Server } = require('karma');
 const path = require('path');
 const runResult = {};
@@ -12,7 +14,7 @@ const ensureBrowser = (browser) => {
     runResult[id] = {
       browser: browser.name,
       logs: [],
-      startTime: browser.lastResult ? browser.lastResult.startTime : Date.now()
+      startTime: browser.lastResult ? browser.lastResult.startTime : Date.now(),
     };
   }
   return id;
@@ -39,8 +41,14 @@ class Runner {
   async run(workingDir) {
     this.workingDir = workingDir;
     process.chdir(workingDir);
-    const opts = await this.createConfig();
+    let opts;
+    try {
+      opts = await this.createConfig();
+    } catch (e) {
+      throw new Error('No karma config found.');
+    }
     log('Creating karma server...');
+    // @ts-ignore
     this.server = new Server(opts, (exitCode) => {
       log(`Karma has exited with ${exitCode}`);
       this._resolve(this.getReport());
@@ -60,13 +68,16 @@ class Runner {
     const cnfFile = path.join(this.workingDir, 'karma.conf.js');
     log(`Reading tests configuration from ${cnfFile}`);
     const cnf = config.parseConfig(cnfFile, {
-      reporters: ['arcci']
+      reporters: ['arcci'],
     });
+    // @ts-ignore
     if (!cnf.plugins) {
+      // @ts-ignore
       cnf.plugins = [];
     }
+    // @ts-ignore
     cnf.plugins.push({
-      'reporter:arcci': ['type', ArcCiReporter]
+      'reporter:arcci': ['type', ArcCiReporter],
     });
     return cnf;
   }
@@ -79,7 +90,7 @@ class Runner {
       failed: 0,
       skipped: 0,
       error: false,
-      results: []
+      results: [],
     };
     for (let i = 0, len = keys.length; i < len; i++) {
       const key = keys[i];

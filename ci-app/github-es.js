@@ -1,3 +1,5 @@
+/* eslint-disable require-jsdoc */
+/* eslint-disable import/no-namespace */
 // Copyright 2019, Mulesoft.
 // Licensed under the Apache License, Version 2.0 (the "License");
 // you may not use this file except in compliance with the License.
@@ -13,10 +15,10 @@
 import * as traceAgent from '@google-cloud/trace-agent';
 import * as debugAgent from '@google-cloud/debug-agent';
 import express from 'express';
-import config from './config';
-import logging from './lib/logging';
-import background from './lib/background';
-import { ApicBuildRunner } from './builds/build-runner';
+import config from './config.js';
+import logging from './lib/logging.js';
+import background from './lib/background.js';
+import { ApicBuildRunner } from './builds/build-runner.js';
 
 const IS_PRODUCTION = config.get('NODE_ENV') === 'production';
 
@@ -34,6 +36,7 @@ class GithubBuild {
     this._onMessage = this._onMessage.bind(this);
     this._onError = this._onError.bind(this);
   }
+
   /**
    * Subscribe to Cloud Pub/Sub and receive messages to process tests requests.
    *
@@ -46,6 +49,7 @@ class GithubBuild {
       await background.subscribeGithubBuild();
     } catch (e) {
       logging.error(e);
+      // eslint-disable-next-line no-process-exit
       process.exit(100);
     }
   }
@@ -71,9 +75,10 @@ class GithubBuild {
   }
 
   setupQueue(id) {
+    logging.info(`Setting up the queue for ${id} build`);
     const runner = new ApicBuildRunner(id);
     this.queue.push(runner);
-    logging.verbose('Build ' + id + ' added to the queue.');
+    logging.verbose(`Build ${id} added to the queue.`);
     runner.on('end', () => this.afterRun(runner));
     runner.on('error', (err) => this.buildError(runner, err));
     this.run();

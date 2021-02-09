@@ -27,67 +27,40 @@
     "Pawel Psztyc",
     "The Advanced REST client authors <arc@mulesoft.com>"
   ],
+  "engines": {
+    "node": ">=13"
+  },
+  "dependencies": {
+    "@types/express": "^4.17.6",
+    "@types/node": ">=13"
+  },
   "devDependencies": {
-    "@advanced-rest-client/eslint-config": "^1.1.5",
     "@advanced-rest-client/prettier-config": "^0.1.0",
-    "@api-components/api-console-builder": "^2.0.6",
-    "@commitlint/cli": "^8.3.5",
-    "@commitlint/config-conventional": "^8.3.4",
+    "@api-components/api-console-builder": "^2.1.0",
+    "@commitlint/cli": "^11.0.0",
+    "@commitlint/config-conventional": "^11.0.0",
+    "@types/openpgp": "^4.4.14",
+    "@types/semver": "^7.3.4",
+    "babel-eslint": "^10.1.0",
     "chai": "^4.2.0",
-    "eslint-config-esnext": "^4.0.0",
+    "eslint-config-esnext": "^4.1.0",
     "eslint-config-google": "^0.14.0",
-    "eslint-config-node": "^4.0.0",
+    "eslint-config-node": "^4.1.0",
+    "eslint-plugin-babel": "^5.3.1",
+    "eslint-plugin-import": "^2.22.1",
+    "eslint-plugin-no-only-tests": "^2.4.0",
     "esm": "^3.2.25",
-    "fs-extra": "^9.0.0",
-    "husky": "^4.2.5",
-    "lint-staged": "^10.1.3",
-    "mocha": "^7.1.1",
-    "prettier": "^2.0.4",
-    "sinon": "^9.0.2"
+    "fs-extra": "^9.0.1",
+    "husky": "^4.3.0",
+    "lerna": "^3.22.0",
+    "lint-staged": "^10.4.2",
+    "mocha": "^7.2.0",
+    "prettier": "^2.1.2",
+    "sinon": "^9.2.0"
   },
   "lint-staged": {
     "*.js": [
       "eslint --fix"
     ]
-  },
-  "eslintConfig": {
-    "extends": [
-      "eslint-config-google"
-    ],
-    "parserOptions": {
-      "sourceType": "module",
-      "ecmaVersion": 8
-    },
-    "env": {
-      "browser": true,
-      "mocha": true,
-      "node": true,
-      "es6": true
-    },
-    "rules": {
-      "no-undef": "error",
-      "require-jsdoc": 0,
-      "comma-dangle": 0,
-      "new-cap": [
-        "error",
-        {
-          "properties": false,
-          "capIsNew": false
-        }
-      ],
-      "max-len": [
-        "error",
-        {
-          "code": 120
-        }
-      ],
-      "object-curly-spacing": [
-        "error",
-        "always"
-      ],
-      "no-console": [
-        "error"
-      ]
-    }
   }
 }

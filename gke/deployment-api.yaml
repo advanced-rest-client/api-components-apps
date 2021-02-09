@@ -40,7 +40,7 @@ spec:
           secretName: apic-ci-key
       containers:
       - name: apic-ci
-        image: gcr.io/advancedrestclient-1155/apic-ci-api:0.2.7
+        image: gcr.io/advancedrestclient-1155/apic-ci-api:0.2.8
         volumeMounts:
         - name: google-cloud-key
           mountPath: /var/secrets/google

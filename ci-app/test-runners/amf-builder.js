@@ -1,19 +1,20 @@
+/* eslint-disable require-jsdoc */
 import GitHub from 'github-api';
 import { Storage } from '@google-cloud/storage';
 import { spawn } from 'child_process';
 import path from 'path';
 import tar from 'tar-fs';
-import logging from '../lib/logging';
+import logging from '../lib/logging.js';
 import { GitSourceControl } from '../github/git-source-control.js';
 
 const bucketName = 'apic-ci-amf-cache';
 
 export class AmfBuilder {
   /**
-   * @param {String} workingDir A working directory where to create AMF library
+   * @param {string} workingDir A working directory where to create AMF library
    * @param {Object} opts
-   * @param {String?} opts.branch A branch to checkout
-   * @param {String?} opts.sha An sha of a commit to use to build the library
+   * @param {string=} opts.branch A branch to checkout
+   * @param {string=} opts.sha An sha of a commit to use to build the library
    * Either sha or branch is allowed as an option.
    * If branch is passed it is translated to sha.
    */
@@ -24,10 +25,11 @@ export class AmfBuilder {
     this.storage = new Storage();
     this.bucket = this.storage.bucket(bucketName);
   }
+
   /**
    * Bucket file name for current configuration.
    * Be sure to call `requestSha()` before accessing this function.
-   * @return {String}
+   * @return {string}
    */
   get cacheFile() {
     const { sha } = this;
@@ -36,6 +38,7 @@ export class AmfBuilder {
     }
     return `${sha}-amf-cache.tar.gz`;
   }
+
   /**
    * Runs the builder. It tries to restore cached build of the AMF from
    * app's bucket or builds AMF from sources.
@@ -65,6 +68,7 @@ export class AmfBuilder {
       logging.error(e);
     }
   }
+
   /**
    * Clones AMF using HTTP scheme to a selected branch or SHA
    * @return {Promise}
@@ -73,6 +77,7 @@ export class AmfBuilder {
     const github = new GitSourceControl(this.workingDir, 'aml-org', 'amf');
     await github.clone(false, 'develop');
   }
+
   /**
    * It makes an API call to GitHub API to check for the sha value
    * for requested branch. The value is set on `this.sha`.
@@ -91,10 +96,10 @@ export class AmfBuilder {
     const { commit } = info;
     this.sha = commit.sha;
   }
+
   /**
    * Finds cached build of the AMF library.
-   * @return {Promise<Boolean>} Resolved to a boolean value
-   * where true means that the AMF library was restored.
+   * @return {Promise<void>} Resolved to a boolean value where true means that the AMF library was restored.
    */
   async restoreCached() {
     await this.ensureBucket();
@@ -111,13 +116,14 @@ export class AmfBuilder {
   _readFileStream(file, dir) {
     return new Promise((resolve, reject) => {
       file.createReadStream()
-          .on('error', function(err) {
+          .on('error', (err) => {
             reject(err);
           })
           .on('end', () => {
             logging.verbose('Cache file downloaded. Unpacking...');
           })
           .pipe(tar.extract(dir))
+          // eslint-disable-next-line prefer-arrow-callback
           .on('error', function(err) {
             reject(err);
           })
@@ -127,6 +133,7 @@ export class AmfBuilder {
           });
     });
   }
+
   /**
    * Creates a bucket with lifecycle rules when needed.
    * @return {Promise}
@@ -142,23 +149,24 @@ export class AmfBuilder {
     await bucket.addLifecycleRule({
       action: 'delete',
       condition: {
-        age: 30 // days
-      }
+        age: 30, // days
+      },
     });
   }
+
   /**
    * Runs AMF builder which runs stb build process
-   * in the repository folder and coppies the required libraries into
-   * `workingDir` + `lib` directory, and filanlly, installs the node depdnencies.
+   * in the repository folder and copies the required libraries into
+   * `workingDir` + `lib` directory, and finally, installs the node dependencies.
    *
-   * @param {String} branchOrSha Branch name or SHA commit id.
+   * @param {string} branchOrSha Branch name or SHA commit id.
    * @return {Promise}
    */
   async buildAmf(branchOrSha) {
     const file = path.join(__dirname, 'amf-compiler.sh');
     return new Promise((resolve, reject) => {
       const amf = spawn(file, [branchOrSha], {
-        cwd: this.workingDir
+        cwd: this.workingDir,
       });
       let lastError;
 
@@ -180,7 +188,7 @@ export class AmfBuilder {
           if (lastError) {
             lastError = new Error(lastError);
           } else {
-            lastError = new Error('AMF build exit with code ' + code);
+            lastError = new Error(`AMF build exit with code ${code}`);
           }
           reject(lastError);
         } else {
@@ -189,6 +197,7 @@ export class AmfBuilder {
       });
     });
   }
+
   /**
    * Caches created AMF library in bucket store.
    * @return {Promise}

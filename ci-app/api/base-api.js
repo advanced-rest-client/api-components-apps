@@ -1,13 +1,32 @@
-import * as jwt from '../lib/jwt';
-import { TokenModel } from '../models/token-model';
+import { verifyToken, isTokenExpired, hasScope } from '../lib/jwt.js';
+import { TokenModel } from '../models/token-model.js';
 import cors from 'cors';
 import { AccessError } from './errors.js';
 
+/* eslint-disable class-methods-use-this */
+
+/** @typedef {import('express').Response} Response */
+/** @typedef {import('express').Request} Request */
+
+/**
+ * @typedef {object} QueryResult
+ * @property {object[]} entities The list of entities to send with the response
+ * @property {string=} pageToken The page token used in pagination
+ */
+
 let tokenModel;
+
+/**
+ * Mase for all API routes
+ */
 export class BaseApi {
+  /**
+   * @constructor
+   */
   constructor() {
     this._processCors = this._processCors.bind(this);
   }
+
   /**
    * Sets CORS on all routes for `OPTIONS` HTTP method.
    * @param {Object} router Express app.
@@ -15,6 +34,7 @@ export class BaseApi {
   setCors(router) {
     router.options('*', cors(this._processCors));
   }
+
   /**
    * Shorthand function to register a route on this class.
    * @param {Object} router Express app.
@@ -34,32 +54,38 @@ export class BaseApi {
     }
   }
 
+  /**
+   * @return {TokenModel} Instance of TokenModel
+   */
   get tokenModel() {
     if (!tokenModel) {
       tokenModel = new TokenModel();
     }
     return tokenModel;
   }
+
   /**
    * Sends error to the client in a standarized way.
-   * @param {Object} res HTTP response object
+   * @param {Response} res HTTP response object
    * @param {String} message Error message to send.
-   * @param {?Number} status HTTP status code, default to 400.
+   * @param {Number=} [status=400] HTTP status code, default to 400.
    */
-  sendError(res, message, status) {
-    res.status(status || 400).send({
+  sendError(res, message, status=400) {
+    res.status(status).send({
       error: true,
-      message
+      message,
     });
   }
+
   /**
    * Tests whether the request has user session that is admin / org user or has
    * authorization header with valid JWT.
-   * @param {Object} req
-   * @param {?String} scope
+   * @param {Request} req
+   * @param {String=} scope
    * @return {Promise<Boolean>}
    */
   async isValidAccess(req, scope) {
+    // @ts-ignore
     const { user } = req;
     if (user && (user.orgUser || user.superUser)) {
       return true;
@@ -74,16 +100,16 @@ export class BaseApi {
     const token = auth.substr(7);
     let detail;
     try {
-      detail = jwt.verifyTokenSync(token);
+      detail = await verifyToken(token);
     } catch (_) {
       return false;
     }
-    if (jwt.isTokenExpired(detail)) {
+    if (isTokenExpired(detail)) {
       return false;
     }
     if (scope) {
-      if (!jwt.hasScope(detail, 'all')) {
-        if (!jwt.hasScope(detail, scope)) {
+      if (!hasScope(detail, 'all')) {
+        if (!hasScope(detail, scope)) {
           return false;
         }
       }
@@ -94,15 +120,17 @@ export class BaseApi {
       if (!queryResult || queryResult.revoked) {
         return false;
       }
+      // @ts-ignore
       req.user = {
-        id: token.issuer.id,
-        displayName: token.issuer.displayName
+        id: queryResult.issuer.id,
+        displayName: queryResult.issuer.displayName,
       };
       return true;
     } catch (e) {
       return false;
     }
   }
+
   /**
    * Ensures that the current user has access to the resource or throws an error
    * otherwise.
@@ -122,9 +150,14 @@ export class BaseApi {
     }
   }
 
+  /**
+   * Processes CORS request.
+   * @param {Request} req
+   * @param {Function} callback
+   */
   _processCors(req, callback) {
     const whitelist = [
-      'https://ci.advancedrestclient.com'
+      'https://ci.advancedrestclient.com',
     ];
     const origin = req.header('Origin');
     let corsOptions;
@@ -136,26 +169,46 @@ export class BaseApi {
       corsOptions = { origin: true };
     }
     if (corsOptions) {
+      // @ts-ignore
       corsOptions.credentials = true;
+      // @ts-ignore
       corsOptions.allowedHeaders = ['Content-Type', 'Authorization'];
+      // @ts-ignore
       corsOptions.origin = origin;
     }
     callback(null, corsOptions);
   }
+
   /**
    * Sends response as a list response.
-   * @param {Array} result Response from the data model.
-   * @param {Object} res HTTP resposne
+   * @param {object[]} result Response from the data model.
+   * @param {Response} res HTTP resposne
    */
   sendListResult(result, res) {
     const data = {
-      items: result[0]
+      items: result[0],
     };
     if (result[1]) {
       data.nextPageToken = result[1];
     }
     res.send(data);
   }
+
+  /**
+   * Sends query results data in response.
+   * @param {QueryResult} data
+   * @param {Response} res HTTP resposne
+   */
+  sendQueryResult(data, res) {
+    const result = {
+      items: data.entities,
+    };
+    if (data.pageToken) {
+      result.nextPageToken = data.pageToken;
+    }
+    res.send(result);
+  }
+
   /**
    * Validates pagination parameters for variuos endpoints that result with list of results.
    * @param {Object} req HTTP request

@@ -1,15 +1,19 @@
 import path from 'path';
 import Git from 'nodegit';
-import logging from '../lib/logging';
-import { Changelog } from './changelog';
-import { BaseBuild } from './base-build';
+import logging from '../lib/logging.js';
+import { Changelog } from './changelog.js';
+import { BaseBuild } from './base-build.js';
 import { GitSourceControl } from '../github/git-source-control.js';
 import { getScopeAndName, nonElements } from './utils.js';
 import { VersionBump } from './VersionBump.js';
+
 /**
  * A class responsible for processing "stage" branch after successfult stage build.
  */
 export class StageBuild extends BaseBuild {
+  /**
+   * @param {object} info Data store entry for the build
+   */
   constructor(info) {
     super();
     const { org, component, bumpVersion } = info;
@@ -27,6 +31,7 @@ export class StageBuild extends BaseBuild {
   get elementWorkingDir() {
     return path.join(this.workingDir, this.name);
   }
+
   /**
    * Initializes two prpoerties: `workingDir` and `git`.
    * Must be called before any other function.
@@ -37,6 +42,10 @@ export class StageBuild extends BaseBuild {
     this.git = new GitSourceControl(this.workingDir, this.organization, this.name);
   }
 
+  /**
+   * Performs the build of the master branch.
+   * @return {Promise<void>}
+   */
   async build() {
     if (nonElements.indexOf(this.name) !== -1) {
       logging.info(`Ignoring stage build for ${this.name}`);
@@ -65,31 +74,44 @@ export class StageBuild extends BaseBuild {
     }
   }
 
+  /**
+   * Clones the repository and sets it to `stage` branch.
+   * @return {Promise<void>}
+   */
   async cloneComponent() {
     await this.git.clone(true, 'stage');
   }
 
+  /**
+   * Bumps version of the package.
+   * @return {Promise<boolean[]>} Promise resolved to an array where items are boolean
+   * values whether (in order) package.json and package-lock.json files were updated.
+   */
   async bumpPackageVersion() {
     if (!this.bumpVersion) {
       return [false, false];
     }
     const bumper = new VersionBump(this.elementWorkingDir);
-    return await bumper.bump('patch');
+    return bumper.bump('patch');
   }
 
+  /**
+   * Builds Changelog
+   * @return {Promise<void>}
+   */
   async buildChangelog() {
     const { organization, name } = this;
     logging.debug('Generaing changelog file...');
     const changelog = new Changelog(this.elementWorkingDir, organization, name);
-    return await changelog.build();
+    await changelog.build();
   }
 
   /**
    * Commits current changes to stage branch.
    *
-   * @param {Boolean} commitPkg True to commit package.json file
-   * @param {Boolean} commitLock True to commit package-lock.json file
-   * @return {Promise}
+   * @param {boolean} commitPkg True to commit package.json file
+   * @param {boolean} commitLock True to commit package-lock.json file
+   * @return {Promise<void>}
    */
   async commitStage(commitPkg, commitLock) {
     logging.verbose('Commiting changes to stage...');
@@ -110,17 +132,19 @@ export class StageBuild extends BaseBuild {
     // // this.stageHead = await repo.head();
     logging.verbose('Stage branch is ready.');
   }
+
   /**
    * Pushes changes to the stage to origin
-   * @return {Promise}
+   * @return {Promise<any>}
    */
   async pushStage() {
     const repo = this.git.repo;
-    return await this.git.push(repo, 'stage');
+    return this.git.push(repo, 'stage');
   }
+
   /**
    * Merges stage with master and commits changes.
-   * @return {Promise}
+   * @return {Promise<void>}
    */
   async commitMaster() {
     logging.verbose('Merging stage with master...');
@@ -143,11 +167,12 @@ export class StageBuild extends BaseBuild {
     await this.git.mergeRemote(repo, 'master');
     logging.verbose('Master branch is merged and ready.');
   }
+
   /**
    * Merges master branch with stage.
    * Sometimes master branch is out of sync with the stage branch. This should
    * make them in sync.
-   * @return {Promise}
+   * @return {Promise<void>}
    */
   async syncStage() {
     logging.verbose('Syncying stage with master...');
@@ -177,6 +202,6 @@ export class StageBuild extends BaseBuild {
    */
   async pushMaster() {
     const repo = this.git.repo;
-    return await this.git.push(repo, 'master');
+    return this.git.push(repo, 'master');
   }
 }

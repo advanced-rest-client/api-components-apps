@@ -2,10 +2,19 @@ import path from 'path';
 import { BaseBuild } from '../builds/base-build.js';
 import { AmfModelGenerator } from './amf-model-generator.js';
 import { DependendenciesManager } from './dependencies-manager.js';
-import logging from '../lib/logging';
+import logging from '../lib/logging.js';
 import { GitSourceControl } from '../github/git-source-control.js';
 
+/**
+ * Base test runner for all types of tests.
+ */
 export class BaseTestRunner extends BaseBuild {
+  /**
+   * @param {string} org Organization name
+   * @param {string} component Name of the component/project
+   * @param {string} pkgName The name of the package
+   * @param {object} config Datastore entry.
+   */
   constructor(org, component, pkgName, config) {
     super();
     this.org = org;
@@ -13,7 +22,9 @@ export class BaseTestRunner extends BaseBuild {
     this.pkgName = pkgName;
     this.repoName = `${org}/${component}`;
     this.testConfig = config;
+    this.abort = false;
   }
+
   /**
    * 1. Create tmp dir
    * 2. Clone repo
@@ -21,6 +32,7 @@ export class BaseTestRunner extends BaseBuild {
    * 4. Create AMF models (AMF build)
    * 5. Run test via `_run()` (child method)
    * 5. Create report.
+   *
    * @return {Promise}
    */
   async run() {
@@ -32,6 +44,15 @@ export class BaseTestRunner extends BaseBuild {
     const result = await this._run();
     return result;
   }
+
+  /**
+   * @abstract
+   * @return {Promise<any>}
+   */
+  async _run() {
+    return !this.abort;
+  }
+
   /**
    * 1. Clone repo
    * 2. Create AMF model (AMF build)
@@ -42,15 +63,20 @@ export class BaseTestRunner extends BaseBuild {
     const { component } = this;
     logging.verbose(`Preparing ${component} component to run in test`);
     const github = new GitSourceControl(this.workingDir, this.org, this.component);
-    await github.clone(false, 'stage');
+    let branch;
+    if (this.testConfig.type === 'bottom-up') {
+      branch = this.testConfig.branch || 'stage';
+    }
+    await github.clone(false, branch);
     if (this.testConfig.type === 'amf-build') {
       await this.updateModels(component);
     }
     await this._prepareDependencies(component);
     logging.verbose(`Component ${component} is ready`);
   }
+
   /**
-   * Installs dependnecies of a component.
+   * Installs dependencies of a component.
    * @param {String} component Component name
    * @return {Promise}
    */
@@ -66,9 +92,9 @@ export class BaseTestRunner extends BaseBuild {
       const name = component.split('/')[1];
       extra = {
         component: name,
-        org: org,
+        org,
         pkgName: component,
-        branch: this.testConfig.branch
+        branch: this.testConfig.branch,
       };
     }
     try {
@@ -79,6 +105,7 @@ export class BaseTestRunner extends BaseBuild {
       throw cause;
     }
   }
+
   /**
    * Generates AMF model for AMF type test.
    *

@@ -1,15 +1,16 @@
 import fs from 'fs-extra';
 import path from 'path';
-import logging from '../lib/logging';
-import { DependencyModel } from '../models/dependency-model';
+import logging from '../lib/logging.js';
+import { DependencyModel } from '../models/dependency-model.js';
 
+/**
+ * A class reposonsilble for building the dependency graph
+ */
 export class DependencyGraph {
   /**
-   * @constructor
-   *
-   * @param {String} workingDir Component location.
-   * @param {String} org Component's organization name
-   * @param {String} component Component name from ARC organization.
+   * @param {string} workingDir Component location.
+   * @param {string} org Component's organization name
+   * @param {string} component Component name from ARC organization.
    */
   constructor(workingDir, org, component) {
     this.component = component;
@@ -18,6 +19,10 @@ export class DependencyGraph {
     this.model = new DependencyModel();
   }
 
+  /**
+   * Builds dependency graph information for a component
+   * @return {Promise<void>}
+   */
   async buildGraph() {
     logging.verbose('Building dependency graph...');
     const pkg = await this.readPackage();
@@ -26,14 +31,19 @@ export class DependencyGraph {
     logging.verbose('Dependency graph ready.');
   }
 
+  /**
+   * Reads package.json file to an object.
+   * @return {Promise<object>}
+   */
   async readPackage() {
     const file = path.join(this.workingDir, 'package.json');
-    return await fs.readJson(file);
+    return fs.readJson(file);
   }
+
   /**
    * Reads dependencies from bower/package file.
    * @param {Object} pkg Componennt package contents≥
-   * @return {Array} First item is a map of dependencies and second item is a
+   * @return {Promise<object[]>} First item is a map of dependencies and second item is a
    * map of dev dependencies. Both can be undefined.
    */
   async readProjectDependencies(pkg) {
@@ -47,10 +57,11 @@ export class DependencyGraph {
     }
     return [deps, devDeps];
   }
+
   /**
    * Filters out all non ARC/API components.
-   * @param {Object} deps Bower/Npm dependencies map
-   * @return {Array<String>} List of ARC/API components dependencies
+   * @param {object} deps Bower/Npm dependencies map
+   * @return {string[]} List of ARC/API components dependencies
    */
   filterDependencies(deps) {
     const result = [];
@@ -59,7 +70,7 @@ export class DependencyGraph {
         result[result.length] = key;
         continue;
       }
-      let index = value.indexOf('advanced-rest-client/');
+      const index = value.indexOf('advanced-rest-client/');
       if (index === -1) {
         continue;
       }
@@ -72,6 +83,7 @@ export class DependencyGraph {
     }
     return result.length ? result : undefined;
   }
+
   /**
    * Filters and stores dependendies graph data.
    * @param {?Object} deps List of dependencies listend in package.json file
